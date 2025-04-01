@@ -1,5 +1,5 @@
 # FTGP2425_Group12_NFTGmamMarket
-"""
+
 # NFTGmamMarket
 
 **English** | [中文](#nftgmammarket-)
@@ -89,7 +89,7 @@ Please adhere to our [Code of Conduct](CODE_OF_CONDUCT.md) and ensure your code 
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE). See the `LICENSE` file for more details.
+No license
 
 ---
 
@@ -97,7 +97,7 @@ This project is licensed under the [MIT License](LICENSE). See the `LICENSE` fil
 
 For questions, bug reports, or suggestions, feel free to:
 - Open an issue on [GitHub](https://github.com/M1ttag/FTGP2425_Group12_NFTGmamMarket/issues).
-- Email us at [email@example.com](mailto:email@example.com).
+- Email us at [jk23090@bristol.ac.uk](mailto:jk23090@bristol.ac.uk).
 
 ---
 
@@ -190,7 +190,7 @@ NFTGmamMarket 是一个基于以太坊构建的去中心化应用（DApp），�
 
 ## 许可证
 
-本项目采用 [MIT 许可证](LICENSE) 开源。详情请查看 `LICENSE` 文件。
+本项目暂无许可证
 
 ---
 
@@ -198,5 +198,5 @@ NFTGmamMarket 是一个基于以太坊构建的去中心化应用（DApp），�
 
 如有疑问、错误报告或建议，请：
 - 在 [GitHub](https://github.com/M1ttag/FTGP2425_Group12_NFTGmamMarket/issues) 上提交 issue。
-- 通过邮件联系我们：[email@example.com](mailto:email@example.com)。
-"""
+- 通过邮件联系我们：[jk23090@bristol.ac.uk](mailto:jk23090@bristol.ac.uk)。
+
