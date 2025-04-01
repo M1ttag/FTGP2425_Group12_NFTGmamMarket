@@ -1,0 +1,320 @@
+/* 导入Google Fonts的Roboto字体 */
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap");
+
+/* 全局样式 */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: "Roboto", sans-serif;
+  background-color: #f0f0f0;
+}
+
+/* 应用容器 */
+.app-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: #ffffff;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+/* 顶部导航 */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+}
+
+header .logo img {
+  height: 50px;
+}
+
+header .user-info {
+  display: flex;
+  align-items: center;
+}
+
+header .user-info img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+header .user-info span {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+/* 导航栏 */
+nav {
+  display: flex;
+  justify-content: center;
+  padding: 10px 0;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+}
+
+nav button {
+  margin: 0 10px;
+  padding: 10px 20px;
+  background-color: #e9ecef;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+nav button:hover,
+nav button.active {
+  background-color: #007bff;
+  color: white;
+  transform: scale(1.05);
+}
+
+/* 市场页面布局 */
+.market {
+  display: flex;
+  padding: 20px;
+}
+
+/* 侧边栏 - 筛选 */
+.sidebar {
+  width: 200px;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-right: 1px solid #dee2e6;
+}
+
+.sidebar h3 {
+  margin-bottom: 15px;
+  font-size: 18px;
+  color: #343a40;
+}
+
+.sidebar label {
+  display: block;
+  margin: 10px 0;
+  font-size: 14px;
+}
+
+.sidebar input[type="checkbox"] {
+  margin-right: 10px;
+}
+
+/* 主内容区 */
+.main-content {
+  flex: 1;
+  padding: 20px;
+}
+
+/* 装备类型选择 */
+.type-selector {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.type-selector button {
+  margin: 5px;
+  padding: 10px;
+  background-color: #e9ecef;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+.type-selector button:hover,
+.type-selector button.active {
+  background-color: #007bff;
+  color: white;
+  transform: scale(1.05);
+}
+
+.type-selector img {
+  width: 20px;
+  vertical-align: middle;
+  margin-right: 5px;
+}
+
+/* 装备列表 */
+.item-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.item {
+  position: relative;
+  width: 150px;
+  padding: 10px;
+  background-color: #ffffff;
+  border: 1px solid #dee2e6;
+  border-radius: 5px;
+  text-align: center;
+  cursor: pointer;
+  transition: box-shadow 0.3s;
+}
+
+.item:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.item img {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+}
+
+.item p {
+  margin: 5px 0;
+  font-size: 14px;
+  color: #495057;
+}
+
+/* 鼠标悬停显示属性 */
+.hover-details {
+  position: absolute;
+  top: 0;
+  left: 100%;
+  background-color: #ffffff;
+  border: 1px solid #dee2e6;
+  padding: 10px;
+  z-index: 10;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  white-space: nowrap;
+}
+
+.hover-details p {
+  margin: 5px 0;
+  font-size: 12px;
+  color: #495057;
+}
+
+/* 背包页面 */
+.inventory {
+  padding: 20px;
+}
+
+.inventory button {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+.inventory button:hover {
+  background-color: #0056b3;
+  transform: scale(1.05);
+}
+
+/* 铸造面板 */
+.mint-section {
+  margin-top: 20px;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 5px;
+}
+
+.mint-section h2 {
+  margin-bottom: 15px;
+  font-size: 20px;
+  color: #343a40;
+}
+
+.mint-section label {
+  display: block;
+  margin: 10px 0;
+  font-size: 14px;
+}
+
+.mint-section input,
+.mint-section select {
+  width: 100%;
+  padding: 8px;
+  margin-top: 5px;
+  border: 1px solid #ced4da;
+  border-radius: 5px;
+}
+
+.mint-section button {
+  margin-top: 20px;
+  padding: 10px 20px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+.mint-section button:hover {
+  background-color: #218838;
+  transform: scale(1.05);
+}
+
+/* 用户装备列表 */
+.inventory .item-list {
+  margin-top: 20px;
+}
+
+.inventory .item {
+  width: 200px;
+  padding: 15px;
+  background-color: #ffffff;
+  border: 1px solid #dee2e6;
+  border-radius: 5px;
+  text-align: center;
+}
+
+.inventory .item img {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+}
+
+.inventory .item p {
+  margin: 5px 0;
+  font-size: 14px;
+  color: #495057;
+}
+
+/* 登录页面 */
+.login-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background-color: #f8f9fa;
+}
+
+.login-container h1 {
+  margin-bottom: 20px;
+  font-size: 24px;
+  color: #343a40;
+}
+
+.login-container button {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+.login-container button:hover {
+  background-color: #0056b3;
+  transform: scale(1.05);
+}
