@@ -2,7 +2,9 @@ import React, { useState, useEffect } from "react";
 import Web3 from "web3";
 import Market from "./Market";
 import Inventory from "./Inventory";
+import TransactionHistory from "./transactionhistory";
 import "./styles.css";
+import "./transactionhistory.css";
 import { useTranslation } from "react-i18next";
 import "./i18n"; // 导入 i18n 配置
 
@@ -1234,69 +1236,74 @@ const contractABI = [
 	}
 ];
 const contractAddress = "0x8d1f44e9c0b3d71c363be0a7c499858ee3471c7b"; // 替换为您的合约地址
+
 function App() {
-	const [web3, setWeb3] = useState(null);
-	const [contract, setContract] = useState(null);
-	const [account, setAccount] = useState("");
+	const { t, i18n } = useTranslation();
+	const [web3, setWeb3]             = useState(null);
+	const [contract, setContract]     = useState(null);
+	const [account, setAccount]       = useState("");
 	const [isLoggedIn, setIsLoggedIn] = useState(false);
 	const [currentPage, setCurrentPage] = useState("market");
-	const [userAvatar, setUserAvatar] = useState(localStorage.getItem("userAvatar") || "/images/default-avatar.png");
-	const [balance, setBalance] = useState("0.00 ETH");
-	const [theme, setTheme] = useState("light");
+	const [txEvents, setTxEvents]     = useState([]);
+	const [balance, setBalance]       = useState("0.00 ETH");
+	const [userAvatar, setUserAvatar] = useState(
+	  localStorage.getItem("userAvatar") || "/images/default-avatar.png"
+	);
 	const [showUserMenu, setShowUserMenu] = useState(false);
-	const { t, i18n } = useTranslation();
+	const [theme, setTheme]               = useState("light");
   
-	// 初始化 Web3 和 MetaMask 连接
+	// 1) init Web3 + contract + account + balance
 	useEffect(() => {
-	  const initWeb3 = async () => {
-		if (window.ethereum) {
-		  const web3Instance = new Web3(window.ethereum);
-		  setWeb3(web3Instance);
-		  try {
-			await window.ethereum.request({ method: "eth_requestAccounts" });
-			const accounts = await web3Instance.eth.getAccounts();
-			setAccount(accounts[0]);
-			setIsLoggedIn(true);
-			const balanceWei = await web3Instance.eth.getBalance(accounts[0]);
-			setBalance(web3Instance.utils.fromWei(balanceWei, "ether") + " ETH");
-			const contractInstance = new web3Instance.eth.Contract(contractABI, contractAddress);
-			setContract(contractInstance);
-		  } catch (error) {
-			console.error("用户拒绝连接 MetaMask:", error);
-		  }
-		} else {
-		  console.log("请安装 MetaMask");
+	  if (!window.ethereum) return;
+	  const w3 = new Web3(window.ethereum);
+	  setWeb3(w3);
+	  (async () => {
+		try {
+		  await window.ethereum.request({ method: "eth_requestAccounts" });
+		  const [acct] = await w3.eth.getAccounts();
+		  setAccount(acct);
+		  setIsLoggedIn(true);
+		  const bal = await w3.eth.getBalance(acct);
+		  setBalance(w3.utils.fromWei(bal, "ether") + " ETH");
+		  setContract(new w3.eth.Contract(contractABI, contractAddress));
+		} catch (err) {
+		  console.error(err);
 		}
-	  };
-	  initWeb3();
+	  })();
 	}, []);
   
-	// 处理头像上传
-	const handleAvatarUpload = (event) => {
-	  const file = event.target.files[0];
-	  if (file) {
-		const reader = new FileReader();
-		reader.onload = (e) => {
-		  const avatarUrl = e.target.result;
-		  setUserAvatar(avatarUrl);
-		  localStorage.setItem("userAvatar", avatarUrl);
-		};
-		reader.readAsDataURL(file);
-	  }
+	// 2) fetch all past events once
+	useEffect(() => {
+	  if (!contract) return;
+	  contract
+		.getPastEvents("allEvents", { fromBlock: 0, toBlock: "latest" })
+		.then((events) => setTxEvents(events.reverse()))
+		.catch(console.error);
+	}, [contract]);
+
+	
+  
+	// avatar upload handler
+	const handleAvatarUpload = (e) => {
+	  const file = e.target.files[0];
+	  if (!file) return;
+	  const reader = new FileReader();
+	  reader.onload = (ev) => {
+		setUserAvatar(ev.target.result);
+		localStorage.setItem("userAvatar", ev.target.result);
+	  };
+	  reader.readAsDataURL(file);
 	};
   
-	// 切换主题
-	const toggleTheme = () => {
-	  setTheme(theme === "dark" ? "light" : "dark");
-	};
+	// theme toggle
+	const toggleTheme = () =>
+	  setTheme((t) => (t === "dark" ? "light" : "dark"));
   
-	// 切换语言
-	const toggleLanguage = () => {
-	  const newLang = i18n.language === "en" ? "zh" : "en";
-	  i18n.changeLanguage(newLang);
-	};
+	// language toggle
+	const toggleLanguage = () =>
+	  i18n.changeLanguage(i18n.language === "en" ? "zh" : "en");
   
-	// 退出登录功能
+	// logout
 	const handleLogout = () => {
 	  setIsLoggedIn(false);
 	  setAccount("");
@@ -1304,71 +1311,98 @@ function App() {
 	  setShowUserMenu(false);
 	};
   
-	// 未登录时的界面
 	if (!isLoggedIn) {
 	  return (
-		<div className="login-container">
-		  <h1 className="login-title">{t("welcome")}</h1>
-		  <button className="login-button" onClick={() => window.ethereum.request({ method: "eth_requestAccounts" })}>
+		<div className="login-container theme-{theme}">
+		  <h1>{t("welcome")}</h1>
+		  <button onClick={() => window.ethereum.request({ method: "eth_requestAccounts" })}>
 			{t("login_with_metamask")}
 		  </button>
 		</div>
 	  );
 	}
   
-	// 已登录时的界面
 	return (
-		
 	  <div className={`app-container theme-${theme}`}>
+		{/* — HEADER — */}
 		<header className="app-header">
-		  <img src="/images/logo.png" alt="Logo" className="app-logo" />
 		  <div className="user-info">
 			<img
 			  src={userAvatar}
 			  alt="Avatar"
 			  className="user-avatar"
-			  onClick={() => setShowUserMenu(!showUserMenu)}
+			  onClick={() => setShowUserMenu((v) => !v)}
 			/>
 			<span className="user-balance">{balance}</span>
+  
 			{showUserMenu && (
 			  <div className="user-menu">
 				<input
+				  id="avatar-upload"
 				  type="file"
 				  accept="image/*"
 				  onChange={handleAvatarUpload}
 				  className="avatar-upload"
-				  id="avatar-upload"
 				/>
-				<label htmlFor="avatar-upload" className="avatar-upload-label">{t("upload_avatar")}</label>
+				<label htmlFor="avatar-upload" className="avatar-upload-label">
+				  {t("upload_avatar")}
+				</label>
 				<button onClick={handleLogout}>{t("logout")}</button>
 			  </div>
 			)}
+
+
 			<button className="theme-toggle" onClick={toggleTheme}>
-			  {t(theme === "dark" ? "light_mode" : "dark_mode")}
+			  {theme === "dark" ? t("light_mode") : t("dark_mode")}
 			</button>
 			<button className="language-toggle" onClick={toggleLanguage}>
 			  {i18n.language === "en" ? "中文" : "English"}
 			</button>
 		  </div>
 		</header>
+  
 		<div className="app-body">
+		  {/* — SIDEBAR NAV — */}
 		  <nav className="app-sidebar">
 			<button
 			  onClick={() => setCurrentPage("market")}
-			  className={`nav-button ${currentPage === "market" ? "active" : ""}`}
+			  className={currentPage === "market" ? "active" : ""}
 			>
 			  {t("market")}
 			</button>
 			<button
 			  onClick={() => setCurrentPage("inventory")}
-			  className={`nav-button ${currentPage === "inventory" ? "active" : ""}`}
+			  className={currentPage === "inventory" ? "active" : ""}
 			>
 			  {t("inventory")}
 			</button>
+			<button
+				onClick={() => setCurrentPage("transaction_history")}
+			  	className={currentPage === "transaction_history" ? "active" : ""}
+			>
+			  {t("transaction_history")}
+			</button>
 		  </nav>
+  
+		  {/* — MAIN CONTENT — */}
 		  <main className="app-content">
-			{currentPage === "market" && <Market contract={contract} account={account} web3={web3} theme={theme} />}
-			{currentPage === "inventory" && <Inventory contract={contract} account={account} web3={web3} theme={theme} />}
+			{/* Market view (no history) */}
+			{currentPage === "market" && (
+			  <Market contract={contract} account={account} web3={web3} theme={theme} />
+			)}
+  
+			{/* Inventory view */}
+			{currentPage === "inventory" && (
+			  <Inventory contract={contract} account={account} web3={web3} theme={theme} />
+			)}
+  
+			{/* Transaction‐history “tab” opens right‐hand panel alongside market */}
+			{currentPage === "transaction_history" && (
+			  <div className="market-with-history">
+				<Market contract={contract} account={account} web3={web3} theme={theme} />
+				<TransactionHistory events={txEvents} />
+			  </div>
+			)}
 		  </main>
 		</div>
 	  </div>

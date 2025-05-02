@@ -1,0 +1,83 @@
+.transaction-history {
+  padding: 1rem;
+  background: rgba(255,255,255,0.8);
+  border-radius: 8px;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.transaction-history h3 {
+  margin-top: 0;
+  font-size: 1.1rem;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 0.5rem;
+}
+
+.transaction-history .no-activity {
+  color: #666;
+  font-style: italic;
+  margin: 1rem 0;
+}
+
+.transaction-history .tx-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.transaction-history .tx-list li {
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+  line-height: 1.3;
+}
+
+.transaction-history .event-name {
+  font-weight: 600;
+}
+
+.transaction-history .tx-hash,
+.transaction-history .tx-block {
+  color: #333;
+  opacity: 0.8;
+}
+
+.transaction-history-container {
+  background: rgba(255,255,255,0.8);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  height: 100%;
+  overflow-y: auto;
+}
+
+.transaction-history-container h3 {
+  margin-top: 0;
+}
+
+.transaction-history-item {
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: #333;
+}
+.tx-history-box {
+  width: 300px;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 1rem;
+  border-radius: 8px;
+
+  /* semi‑transparent white background so text stands out */
+  background: rgba(255, 255, 255, 0.85);
+
+  /* add a subtle backdrop blur if you like */
+  backdrop-filter: blur(8px);
+
+  /* ensure it floats above the blurred background */
+  position: relative;
+  z-index: 10;
+}
+
+.theme-dark .tx-history-box {
+  background: rgba(20, 20, 30, 0.75);
+}
