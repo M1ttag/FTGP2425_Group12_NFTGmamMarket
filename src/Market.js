@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 
-function Market({ contract, account, web3,theme }) {
+function Market({ contract, account, web3, theme }) {
   const [items, setItems] = useState([]);
   const [filters, setFilters] = useState({
     attackPower: false,
@@ -24,24 +24,25 @@ function Market({ contract, account, web3,theme }) {
   const [viewMode, setViewMode] = useState("preview");
   const { t } = useTranslation();
 
-  const attributeNames = t("attribute_names", { returnObjects: true });
-  const equipmentTypes = t("equipment_types", { returnObjects: true });
+  const attributeNames  = t("attribute_names", { returnObjects: true });
+  const equipmentTypes  = t("equipment_types",  { returnObjects: true });
 
-  const loadItems = async () => {
+  // wrap loadItems in useCallback so it's stable
+  const loadItems = useCallback(async () => {
     if (!contract || !web3) return;
     try {
       const listedItems = await contract.methods.getListedItems().call();
       const itemsData = await Promise.all(
         listedItems.map(async (id) => {
           const equipment = await contract.methods.getEquipment(id).call();
-          const listing = await contract.methods.listings(id).call();
+          const listing   = await contract.methods.listings(id).call();
           return {
             id,
-            name: equipment.name,
+            name:       equipment.name,
             attributes: equipment.attributes,
             listing,
-            type: equipment.eqType,
-            image: `/images/${equipmentTypes[equipment.eqType].name}.png`,
+            type:       equipment.eqType,
+            image:      `/images/${equipmentTypes[equipment.eqType].name}.png`,
           };
         })
       );
@@ -49,11 +50,12 @@ function Market({ contract, account, web3,theme }) {
     } catch (error) {
       console.error("加载市场失败:", error);
     }
-  };
+  }, [contract, web3, equipmentTypes]);
 
+  // now effect depends only on loadItems
   useEffect(() => {
     loadItems();
-  }, [contract, web3]);
+  }, [loadItems]);
 
   useEffect(() => {
     if (selectedItem && selectedItem.listing.forRent) {
@@ -63,7 +65,9 @@ function Market({ contract, account, web3,theme }) {
 
   const handleBuy = async (item) => {
     try {
-      await contract.methods.buyItem(item.id).send({ from: account, value: item.listing.salePrice.toString() });
+      await contract.methods
+        .buyItem(item.id)
+        .send({ from: account, value: item.listing.salePrice.toString() });
       alert(t("buy_success"));
       loadItems();
     } catch (error) {
@@ -74,10 +78,10 @@ function Market({ contract, account, web3,theme }) {
   const handleRent = async (item, days) => {
     try {
       const rentalPricePerDay = web3.utils.toBN(item.listing.rentalPricePerDay);
-      const totalRentalPrice = rentalPricePerDay.mul(web3.utils.toBN(days));
+      const totalRentalPrice  = rentalPricePerDay.mul(web3.utils.toBN(days));
       await contract.methods.rentItem(item.id, days).send({
         from: account,
-        value: totalRentalPrice.toString()
+        value: totalRentalPrice.toString(),
       });
       alert(t("rent_success"));
       loadItems();
@@ -91,13 +95,15 @@ function Market({ contract, account, web3,theme }) {
   };
 
   const filteredItems = items.filter((item) => {
-    if (selectedType !== null && Number(item.type) !== selectedType) return false;
+    if (selectedType !== null && Number(item.type) !== selectedType)
+      return false;
     return Object.entries(filters).every(([key, value]) => {
       if (!value) return true;
-      const attrIndex = Object.keys(attributeNames).indexOf(key);
-      return item.attributes[attrIndex] > 0n;
+      const idx = Object.keys(attributeNames).indexOf(key);
+      return item.attributes[idx] > 0n;
     });
   });
+
   const attributeLabels = [
     attributeNames.attackPower,
     attributeNames.abilityPower,
@@ -112,112 +118,167 @@ function Market({ contract, account, web3,theme }) {
     attributeNames.movementSpeed,
     attributeNames.healingShielding,
   ];
-  const nonZeroAttributes = (attrs) => {
-    const attrArray = Array.isArray(attrs) ? attrs : Object.values(attrs);
-    return attrArray
-      .map((value, index) => {
-        if (Number(value) > 0 && attributeLabels[index]) {
-          return `${attributeLabels[index]}: ${value}`;
-        }
-        return null;
-      })
+  const nonZeroAttributes = (attrs) =>
+    Object.values(attrs)
+      .map((v, i) => (Number(v) > 0 ? `${attributeLabels[i]}: ${v}` : null))
       .filter(Boolean);
-  };
 
   return (
     <div className={`app-container theme-${theme}`}>
-    <div className="market">
-      <div className="sidebar">
-        <h3>{t("filter_attributes")}</h3>
-        {Object.entries(attributeNames).map(([key, label]) => (
-          <label key={key}>
-            <input type="checkbox" checked={filters[key]} onChange={() => handleFilterChange(key)} />
-            {label}
-          </label>
-        ))}
-      </div>
-      <div className="main-content">
-        <div className="type-selector">
-          {equipmentTypes.map((type) => (
-            <button
-              key={type.id}
-              onClick={() => setSelectedType(type.id)}
-              className={selectedType === type.id ? "active" : ""}
-            >
-              <img src={type.icon} alt={type.name} />
-              {type.name}
-            </button>
+      <div className="market">
+        <div className="sidebar">
+          <h3>{t("filter_attributes")}</h3>
+          {Object.entries(attributeNames).map(([key, label]) => (
+            <label key={key}>
+              <input
+                type="checkbox"
+                checked={filters[key]}
+                onChange={() => handleFilterChange(key)}
+              />
+              {label}
+            </label>
           ))}
         </div>
-        <button onClick={() => setViewMode(viewMode === "preview" ? "list" : "preview")}>
-          {t(viewMode === "preview" ? "switch_to_list" : "switch_to_preview")}
-        </button>
-        {!selectedItem ? (
-          <div className="item-list">
-            {filteredItems.map((item) => (
-              <div key={item.id} className="item" onClick={() => setSelectedItem(item)}>
-                <img src={item.image} alt={item.name} />
-                <p>{item.name}</p>
-                {viewMode === "list" && <p>{nonZeroAttributes(item.attributes).join(", ")}</p>}
-                {viewMode === "preview" && (
-                  <p>
-                    {item.listing.forSale && `${t("for_sale")}: ${web3.utils.fromWei(item.listing.salePrice, "ether")} ETH`}
-                    {item.listing.forRent && `${t("for_rent")}: ${web3.utils.fromWei(item.listing.rentalPricePerDay, "ether")} ETH/day`}
-                  </p>
-                )}
-                {hoveredItem === item && viewMode === "preview" && (
-                  <div className="hover-details">
-                    {nonZeroAttributes(item.attributes).map((attr, idx) => (
-                      <p key={idx}>{attr}</p>
-                    ))}
-                  </div>
-                )}
-              </div>
+
+        <div className="main-content">
+          <div className="type-selector">
+            {equipmentTypes.map((type) => (
+              <button
+                key={type.id}
+                onClick={() => setSelectedType(type.id)}
+                className={selectedType === type.id ? "active" : ""}
+              >
+                <img src={type.icon} alt={type.name} />
+                {type.name}
+              </button>
             ))}
           </div>
-        ) : (
-          <div className="item-detail">
-            <h2>{selectedItem.name}</h2>
-            <img src={selectedItem.image} alt={selectedItem.name} />
-            <p>{t("type")}: {equipmentTypes[selectedItem.type].name}</p>
-            <p>{t("attributes")}: {nonZeroAttributes(selectedItem.attributes).join(", ")}</p>
-            {selectedItem.listing.forSale && (
-              <div>
-                <h3>{t("buy")}</h3>
-                <p>
-                  {t("price")}: {web3.utils.fromWei(selectedItem.listing.salePrice.toString(), "ether")} ETH
-                </p>
-                <button onClick={() => handleBuy(selectedItem)}>{t("confirm_buy")}</button>
-              </div>
-            )}
-            {selectedItem.listing.forRent && (
-              <div>
-                <h3>{t("rent")}</h3>
-                <p>
-                  {t("daily_rent")}: {web3.utils.fromWei(selectedItem.listing.rentalPricePerDay.toString(), "ether")} ETH
-                </p>
-                <p>{t("min_rental_days")}: {Number(selectedItem.listing.minRentalDays)}</p>
-                <label>
-                  {t("rental_days")}:
-                  <input
-                    type="number"
-                    min={Number(selectedItem.listing.minRentalDays)}
-                    value={rentalDays}
-                    onChange={(e) => setRentalDays(e.target.value)}
-                  />
-                </label>
-                <p>
-                  {t("total_rent")}:{" "}
-                  {(Number(rentalDays) * Number(web3.utils.fromWei(selectedItem.listing.rentalPricePerDay.toString(), "ether"))).toFixed(4)} ETH
-                </p>
-                <button onClick={() => handleRent(selectedItem, Number(rentalDays))}>{t("confirm_rent")}</button>
-              </div>
-            )}
-            <button onClick={() => setSelectedItem(null)}>{t("back")}</button>
-          </div>
-        )}
+
+          <button
+            onClick={() =>
+              setViewMode((vm) => (vm === "preview" ? "list" : "preview"))
+            }
+          >
+            {t(viewMode === "preview" ? "switch_to_list" : "switch_to_preview")}
+          </button>
+
+          {!selectedItem ? (
+            <div className="item-list">
+              {filteredItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="item"
+                  onClick={() => setSelectedItem(item)}
+                  onMouseEnter={() => setHoveredItem(item)}
+                  onMouseLeave={() => setHoveredItem(null)}
+                >
+                  <img src={item.image} alt={item.name} />
+                  <p>{item.name}</p>
+                  {viewMode === "list" && (
+                    <p>{nonZeroAttributes(item.attributes).join(", ")}</p>
+                  )}
+                  {viewMode === "preview" && (
+                    <p>
+                      {item.listing.forSale &&
+                        `${t("for_sale")}: ${web3.utils.fromWei(
+                          item.listing.salePrice,
+                          "ether"
+                        )} ETH`}
+                      {item.listing.forRent &&
+                        `${t("for_rent")}: ${web3.utils.fromWei(
+                          item.listing.rentalPricePerDay,
+                          "ether"
+                        )} ETH/day`}
+                    </p>
+                  )}
+                  {hoveredItem === item && viewMode === "preview" && (
+                    <div className="hover-details">
+                      {nonZeroAttributes(item.attributes).map((attr, idx) => (
+                        <p key={idx}>{attr}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="item-detail">
+              <h2>{selectedItem.name}</h2>
+              <img src={selectedItem.image} alt={selectedItem.name} />
+              <p>
+                {t("type")}: {equipmentTypes[selectedItem.type].name}
+              </p>
+              <p>
+                {t("attributes")}:{" "}
+                {nonZeroAttributes(selectedItem.attributes).join(", ")}
+              </p>
+              {selectedItem.listing.forSale && (
+                <div>
+                  <h3>{t("buy")}</h3>
+                  <p>
+                    {t("price")}:{" "}
+                    {web3.utils.fromWei(
+                      selectedItem.listing.salePrice,
+                      "ether"
+                    )}{" "}
+                    ETH
+                  </p>
+                  <button onClick={() => handleBuy(selectedItem)}>
+                    {t("confirm_buy")}
+                  </button>
+                </div>
+              )}
+              {selectedItem.listing.forRent && (
+                <div>
+                  <h3>{t("rent")}</h3>
+                  <p>
+                    {t("daily_rent")}:{" "}
+                    {web3.utils.fromWei(
+                      selectedItem.listing.rentalPricePerDay,
+                      "ether"
+                    )}{" "}
+                    ETH
+                  </p>
+                  <p>
+                    {t("min_rental_days")}:{" "}
+                    {Number(selectedItem.listing.minRentalDays)}
+                  </p>
+                  <label>
+                    {t("rental_days")}:
+                    <input
+                      type="number"
+                      min={Number(selectedItem.listing.minRentalDays)}
+                      value={rentalDays}
+                      onChange={(e) => setRentalDays(e.target.value)}
+                    />
+                  </label>
+                  <p>
+                    {t("total_rent")}:{" "}
+                    {(Number(rentalDays) *
+                      Number(
+                        web3.utils.fromWei(
+                          selectedItem.listing.rentalPricePerDay,
+                          "ether"
+                        )
+                      )).toFixed(4)}{" "}
+                    ETH
+                  </p>
+                  <button
+                    onClick={() =>
+                      handleRent(selectedItem, Number(rentalDays))
+                    }
+                  >
+                    {t("confirm_rent")}
+                  </button>
+                </div>
+              )}
+              <button onClick={() => setSelectedItem(null)}>
+                {t("back")}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
     </div>
   );
 }
