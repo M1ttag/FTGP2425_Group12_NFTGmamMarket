@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { fromWei, toWei } from './utils';
 
-function Inventory({ contract, account, web3,theme }) {
+function Inventory({ contract, account, web3, theme }) {
   const [showMint, setShowMint] = useState(false);
   const [userItems, setUserItems] = useState({ unlisted: [], listed: [] });
   const [listingItem, setListingItem] = useState(null);
@@ -23,9 +24,11 @@ function Inventory({ contract, account, web3,theme }) {
   const equipmentTypes = t("equipment_types", { returnObjects: true });
 
   const calculateTotalValueLocal = (attributes) => {
-    const coefficients = [35, 22, 25, 20, 40, 15, 30, 30, 10, 12, 50, 18];
-    let total = 0;
-    attributes.forEach((attr, index) => (total += attr * coefficients[index]));
+    const coefficients = [35n, 22n, 25n, 20n, 40n, 15n, 30n, 30n, 10n, 12n, 50n, 18n];
+    let total = 0n;
+    attributes.forEach((attr, index) => {
+      total += BigInt(attr) * coefficients[index];
+    });
     return total;
   };
 
@@ -34,7 +37,7 @@ function Inventory({ contract, account, web3,theme }) {
     newAttributes[index] = parseInt(value) || 0;
     setAttributes(newAttributes);
     const totalValueWei = calculateTotalValueLocal(newAttributes);
-    setTotalValue(web3.utils.fromWei(totalValueWei.toString(), "ether"));
+    setTotalValue(fromWei(totalValueWei));
   };
 
   const handleImageUpload = (event) => {
@@ -54,7 +57,7 @@ function Inventory({ contract, account, web3,theme }) {
     try {
       const valueInWei = calculateTotalValueLocal(attributes);
       const tx = await contract.methods
-        .mintEquipment(equipmentType, attributes, equipmentName) // attributes 数组应只包含用户设置的值
+        .mintEquipment(equipmentType, attributes.map(attr => attr.toString()), equipmentName)
         .send({ from: account, value: valueInWei.toString() });
       const newTokenId = tx.events.EquipmentMinted.returnValues.tokenId;
       if (equipmentImage) {
@@ -81,15 +84,13 @@ function Inventory({ contract, account, web3,theme }) {
           const listing = await contract.methods.listings(i).call();
           const currentUser = await contract.methods.userOf(i).call();
           const expiresAt = await contract.methods.userExpires(i).call();
-          console.log(`Token ${i} attributes:`, equipment.attributes);
-          // 根据 tokenId 从 localStorage 获取图片
           const image = localStorage.getItem(`equipmentImage_${i}`) || `/images/${equipmentTypes[equipment.eqType].name}.png`;
           userItems.push({
             id: i,
             name: equipment.name,
             type: equipment.eqType,
             attributes: equipment.attributes,
-            image, // 使用独立的图片
+            image,
             listing,
             currentUser,
             expiresAt,
@@ -122,11 +123,10 @@ function Inventory({ contract, account, web3,theme }) {
       return;
     }
     try {
-      const salePriceWei = forSale ? web3.utils.toWei(salePrice, "ether") : 0;
-      const rentalPriceWei = forRent ? web3.utils.toWei(rentalPricePerDay, "ether") : 0;
-      const minDays = forRent ? parseInt(minRentalDays) : 0;
+      const salePriceWei = forSale ? toWei(salePrice) : BigInt(0);
+      const rentalPriceWei = forRent ? toWei(rentalPricePerDay) : BigInt(0);
       await contract.methods
-        .listItem(listingItem.id, forSale, salePriceWei, forRent, rentalPriceWei, minDays)
+        .listItem(listingItem.id, forSale, salePriceWei.toString(), forRent, rentalPriceWei.toString(), minDays)
         .send({ from: account });
       alert(t("list_success"));
       setListingItem(null);
@@ -150,145 +150,144 @@ function Inventory({ contract, account, web3,theme }) {
     const attrArray = Array.isArray(attrs) ? attrs : Object.values(attrs);
     return attrArray
       .map((value, index) => {
-        if (Number(value) > 0 && attributeLabels[index]) {
+        if (BigInt(value) > 0n && attributeLabels[index]) {
           return `${attributeLabels[index]}: ${value}`;
         }
         return null;
       })
       .filter(Boolean);
   };
-  return (
 
+  return (
     <div className={`app-container theme-${theme}`}>
-    <div className="inventory">
-      <button onClick={() => setShowMint(!showMint)}>{showMint ? t("close_mint") : t("mint_equipment")}</button>
-      {showMint && (
-        <div className="mint-section">
-          <h2>{t("mint_equipment")}</h2>
-          <label>
-            {t("equipment_type")}:
-            <select value={equipmentType} onChange={(e) => setEquipmentType(parseInt(e.target.value))}>
-              {equipmentTypes.map((type) => (
-                <option key={type.id} value={type.id}>
-                  {type.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            {t("name")}:
-            <input
-              type="text"
-              value={equipmentName}
-              onChange={(e) => setEquipmentName(e.target.value)}
-              placeholder={t("enter_equipment_name")}
-            />
-          </label>
-          <label>
-            {t("image")}:
-            <input type="file" accept="image/*" onChange={handleImageUpload} />
-          </label>
-          <h3>{t("attributes")}</h3>
-          {attributeLabels.map((label, index) => (
-            <label key={index}>
-              {label}:
-              <input
-                type="number"
-                min="0"
-                value={attributes[index]}
-                onChange={(e) => handleAttributeChange(index, e.target.value)}
-              />
-            </label>
-          ))}
-          <p>{t("mint_cost")}: {totalValue} ETH</p>
-          <button onClick={handleMint}>{t("mint")}</button>
-        </div>
-      )}
-      <div className="item-list">
-        <h2>{t("unlisted_items")}</h2>
-        {userItems.unlisted.map((item) => (
-          <div key={item.id} className="item">
-            <img src={item.image} alt={item.name} />
-            <p>{t("name")}: {item.name}</p>
-            <p>{t("type")}: {equipmentTypes[item.type].name}</p>
-            <p>{t("attributes")}: {nonZeroAttributes(item.attributes).join(", ")}</p>
-            <button onClick={() => handleListClick(item)}>{t("list")}</button>
-          </div>
-        ))}
-      </div>
-      <div className="item-list">
-        <h2>{t("listed_items")}</h2>
-        {userItems.listed.map((item) => (
-          <div key={item.id} className="item">
-            <img src={item.image} alt={item.name} />
-            <p>{t("name")}: {item.name}</p>
-            <p>{t("type")}: {equipmentTypes[item.type].name}</p>
-            {item.listing.forSale && (
-              <p>
-                {t("for_sale")}: {web3.utils.fromWei(item.listing.salePrice, "ether")} ETH
-              </p>
-            )}
-            {item.listing.forRent && (
-              <p>
-                {t("for_rent")}: {web3.utils.fromWei(item.listing.rentalPricePerDay, "ether")} ETH/day, min{" "}
-                {item.listing.minRentalDays} {t("days")}
-              </p>
-            )}
-            <button onClick={() => handleDelist(item.id)}>{t("delist")}</button>
-          </div>
-        ))}
-      </div>
-      {listingItem && (
-        <div className="listing-form">
-          <h3>{t("list_item")}: {listingItem.name}</h3>
-          <label>
-            <input type="checkbox" checked={listingOptions.forSale} onChange={(e) => setListingOptions({ ...listingOptions, forSale: e.target.checked })} />
-            {t("list_for_sale")}
-          </label>
-          {listingOptions.forSale && (
+      <div className="inventory">
+        <button onClick={() => setShowMint(!showMint)}>{showMint ? t("close_mint") : t("mint_equipment")}</button>
+        {showMint && (
+          <div className="mint-section">
+            <h2>{t("mint_equipment")}</h2>
             <label>
-              {t("sale_price")} (ETH):
+              {t("equipment_type")}:
+              <select value={equipmentType} onChange={(e) => setEquipmentType(parseInt(e.target.value))}>
+                {equipmentTypes.map((type) => (
+                  <option key={type.id} value={type.id}>
+                    {type.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              {t("name")}:
               <input
-                type="number"
-                value={listingOptions.salePrice}
-                onChange={(e) => setListingOptions({ ...listingOptions, salePrice: e.target.value })}
-                step="0.001"
-                min="0"
+                type="text"
+                value={equipmentName}
+                onChange={(e) => setEquipmentName(e.target.value)}
+                placeholder={t("enter_equipment_name")}
               />
             </label>
-          )}
-          <label>
-            <input type="checkbox" checked={listingOptions.forRent} onChange={(e) => setListingOptions({ ...listingOptions, forRent: e.target.checked })} />
-            {t("list_for_rent")}
-          </label>
-          {listingOptions.forRent && (
-            <>
-              <label>
-                {t("rental_price_per_day")} (ETH):
+            <label>
+              {t("image")}:
+              <input type="file" accept="image/*" onChange={handleImageUpload} />
+            </label>
+            <h3>{t("attributes")}</h3>
+            {attributeLabels.map((label, index) => (
+              <label key={index}>
+                {label}:
                 <input
                   type="number"
-                  value={listingOptions.rentalPricePerDay}
-                  onChange={(e) => setListingOptions({ ...listingOptions, rentalPricePerDay: e.target.value })}
+                  min="0"
+                  value={attributes[index]}
+                  onChange={(e) => handleAttributeChange(index, e.target.value)}
+                />
+              </label>
+            ))}
+            <p>{t("mint_cost")}: {totalValue} ETH</p>
+            <button onClick={handleMint}>{t("mint")}</button>
+          </div>
+        )}
+        <div className="item-list">
+          <h2>{t("unlisted_items")}</h2>
+          {userItems.unlisted.map((item) => (
+            <div key={item.id} className="item">
+              <img src={item.image} alt={item.name} />
+              <p>{t("name")}: {item.name}</p>
+              <p>{t("type")}: {equipmentTypes[item.type].name}</p>
+              <p>{t("attributes")}: {nonZeroAttributes(item.attributes).join(", ")}</p>
+              <button onClick={() => handleListClick(item)}>{t("list")}</button>
+            </div>
+          ))}
+        </div>
+        <div className="item-list">
+          <h2>{t("listed_items")}</h2>
+          {userItems.listed.map((item) => (
+            <div key={item.id} className="item">
+              <img src={item.image} alt={item.name} />
+              <p>{t("name")}: {item.name}</p>
+              <p>{t("type")}: {equipmentTypes[item.type].name}</p>
+              {item.listing.forSale && (
+                <p>
+                  {t("for_sale")}: {fromWei(item.listing.salePrice)} ETH
+                </p>
+              )}
+              {item.listing.forRent && (
+                <p>
+                  {t("for_rent")}: {fromWei(item.listing.rentalPricePerDay)} ETH/day, min {item.listing.minRentalDays} {t("days")}
+                </p>
+              )}
+              <button onClick={() => handleDelist(item.id)}>{t("delist")}</button>
+            </div>
+          ))}
+        </div>
+        {listingItem && (
+          <div className="listing-form">
+            <h3>{t("list_item")}: {listingItem.name}</h3>
+            <label>
+              <input type="checkbox" checked={listingOptions.forSale} onChange={(e) => setListingOptions({ ...listingOptions, forSale: e.target.checked })} />
+              {t("list_for_sale")}
+            </label>
+            {listingOptions.forSale && (
+              <label>
+                {t("sale_price")} (ETH):
+                <input
+                  type="number"
+                  value={listingOptions.salePrice}
+                  onChange={(e) => setListingOptions({ ...listingOptions, salePrice: e.target.value })}
                   step="0.001"
                   min="0"
                 />
               </label>
-              <label>
-                {t("min_rental_days")}:
-                <input
-                  type="number"
-                  value={listingOptions.minRentalDays}
-                  onChange={(e) => setListingOptions({ ...listingOptions, minRentalDays: e.target.value })}
-                  min="1"
-                />
-              </label>
-            </>
-          )}
-          <button onClick={handleList}>{t("list")}</button>
-          <button onClick={() => setListingItem(null)}>{t("cancel")}</button>
-        </div>
-      )}
-    </div>
+            )}
+            <label>
+              <input type="checkbox" checked={listingOptions.forRent} onChange={(e) => setListingOptions({ ...listingOptions, forRent: e.target.checked })} />
+              {t("list_for_rent")}
+            </label>
+            {listingOptions.forRent && (
+              <>
+                <label>
+                  {t("rental_price_per_day")} (ETH):
+                  <input
+                    type="number"
+                    value={listingOptions.rentalPricePerDay}
+                    onChange={(e) => setListingOptions({ ...listingOptions, rentalPricePerDay: e.target.value })}
+                    step="0.001"
+                    min="0"
+                  />
+                </label>
+                <label>
+                  {t("min_rental_days")}:
+                  <input
+                    type="number"
+                    value={listingOptions.minRentalDays}
+                    onChange={(e) => setListingOptions({ ...listingOptions, minRentalDays: e.target.value })}
+                    min="1"
+                  />
+                </label>
+              </>
+            )}
+            <button onClick={handleList}>{t("list")}</button>
+            <button onClick={() => setListingItem(null)}>{t("cancel")}</button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
