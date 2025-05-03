@@ -6,7 +6,7 @@ import "./styles.css";
 import { useTranslation } from "react-i18next";
 import "./i18n"; // 导入 i18n 配置
 
-// 替换为您的合约ABI和地址
+
 const contractABI = [
 	{
 		"inputs": [
