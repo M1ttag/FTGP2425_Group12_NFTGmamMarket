@@ -1,42 +1,81 @@
-/* 全局样式 */
+/* å…¨å±€æ ·å¼ */
+
 body {
   margin: 0;
   padding: 0;
   font-family: "Orbitron", sans-serif;
   overflow-x: hidden;
+
+  /* stack banner over corridor; both fixed so they never repeat or scroll away */
+  background:
+    "/images/sample.jpg" no-repeat center top fixed,
+    "/images/sample.jpg"     no-repeat center center fixed;
+
+  background-size: cover, cover;
 }
 
-/* 深色主题变量 */
+/* ensure html/body grow with content */
+html, body {
+  min-height: 100%;
+}
+
+html, body {
+  height: 100%;
+}
+
+/* æ·±è‰²ä¸»é¢˜å˜é‡ */
 body.dark {
-  --input-bg: #333;       /* 输入框背景色 */
-  --input-color: #fff;    /* 输入框字体色 */
-  --input-border: #555;   /* 输入框边框色 */
+  --input-bg: #333;       /* è¾“å…¥æ¡†èƒŒæ™¯è‰² */
+  --input-color: #fff;    /* è¾“å…¥æ¡†å­—ä½“è‰² */
+  --input-border: #555;   /* è¾“å…¥æ¡†è¾¹æ¡†è‰² */
 }
 
-/* 浅色主题变量 */
+/* æµ…è‰²ä¸»é¢˜å˜é‡ */
 body.light {
-  --input-bg: #fff;       /* 输入框背景色 */
-  --input-color: #000;    /* 输入框字体色 */
-  --input-border: #ccc;   /* 输入框边框色 */
+  --input-bg: #fff;       /* è¾“å…¥æ¡†èƒŒæ™¯è‰² */
+  --input-color: #000;    /* è¾“å…¥æ¡†å­—ä½“è‰² */
+  --input-border: #ccc;   /* è¾“å…¥æ¡†è¾¹æ¡†è‰² */
 }
 
 .app-container {
-  background-color: #f0f0f0; /* 浅色背景 */
-  color: #333; /* 深色文字 */
+  position: relative;
+  min-height: 100vh;
+  z-index: 0;
 }
 
-/* 深色主题 */
+.app-container::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image: url("./images/sample.jpg");
+  background-size: cover;
+  opacity: 0.5;
+  z-index: -1;
+
+}
+.app-header {
+  position: relative;
+  z-index: 10;
+}
+
+/* 4) If your user‑info dropdown needs to pop above everything */
+.user-menu {
+  position: absolute;
+  z-index: 20;
+}
+
+/* æ·±è‰²ä¸»é¢˜ */
 .app-container.theme-dark {
-  background-color: #1a1a1a; /* 深色背景 */
-  color: #e0e0e0; /* 浅色文字 */
+  background-color: #333; /* æ·±è‰²èƒŒæ™¯ */
+  color: #e0e0e0; /* æµ…è‰²æ–‡å­— */
 }
 
-/* 浅色主题 */
+/* æµ…è‰²ä¸»é¢˜ */
 .app-container.theme-light {
-  background-color: #f0e6d2; /* 浅色背景 */
-  color: #333; /* 深色文字 */
+  background-color: #f0e6d2; /* æµ…è‰²èƒŒæ™¯ */
+  color: #333; /* æ·±è‰²æ–‡å­— */
 }
-/* 动画 */
+/* åŠ¨ç”» */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
@@ -47,16 +86,50 @@ body.light {
   50% { transform: scale(1.05); }
   100% { transform: scale(1); }
 }
+.no-items {
+  text-align: center;
+  padding: 2rem;
+  color: #999;
+  font-style: italic;
+}
 
-/* 顶部导航 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.modal {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  text-align: center;
+}
+
+/* é¡¶éƒ¨å¯¼èˆª */
 header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px;
+  padding: 180px;
   border-radius: 10px;
   margin-bottom: 20px;
   animation: slideDown 0.5s ease-out;
+  background-image: url("./images/samples1.jpg"); /* Replace with your actual image path */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  border-radius: 12px;
+  position: relative;
+  z-index: 1;
 }
 
 header.dark {
@@ -159,21 +232,34 @@ header .user-info select:hover {
   transform: scale(1.05);
 }
 
-/* 侧边导航栏 */
 .app-body {
   display: flex;
+  height: calc(100vh - /* header height */ 100px);
+  overflow: hidden; 
 }
 
+/* Ensure your transaction‑history panel fits nicely: */
+.transaction-history {
+  flex: 0 0 300px;      /* width=300px, never shrink/grow */
+  max-width: 300px;
+  margin-left: 20px;    /* gap between main & history */
+  background: rgba(183, 176, 176, 0.9);
+  border-radius: 8px;
+  padding: 5px;
+  overflow-y: auto;
+}
+
+/* ä¾§è¾¹å¯¼èˆªæ  */
+
 .app-sidebar {
-  width: 200px;
-  padding: 20px;
-  border-radius: 10px;
-  margin-right: 20px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  flex: 0 0 200px;      /* never shrink, never grow, width=200px */
+  max-width: 200px;
+  overflow: auto;       /* in case it ever overflows */
 }
 
 .app-sidebar.dark {
   background: rgba(30, 30, 30, 0.9);
+ 
 }
 
 .app-sidebar.light {
@@ -182,15 +268,17 @@ header .user-info select:hover {
 
 .app-sidebar button {
   display: block;
-  width: 100%;
+  width: auto;            /* let the button size to its content */
   padding: 15px;
   margin-bottom: 10px;
   border: none;
   border-radius: 8px;
   cursor: pointer;
   font-size: 18px;
-  color: #fff;
   transition: all 0.3s ease;
+  color: #fff;
+  background-color: #34495e
+  
 }
 
 .app-sidebar button.dark {
@@ -209,12 +297,39 @@ header .user-info select:hover {
   box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
 }
 
-/* 主内容区域 */
+/* ä¸»å†…å®¹åŒºåŸŸ */
+/* MAIN CONTENT: fill remaining space, scroll vertically */
 .app-content {
+  flex: 1 1 auto;       /* grow & shrink */
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.market-with-history {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.market-with-history > :first-child {
   flex: 1;
-  padding: 25px;
-  border-radius: 10px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.tx-history-box {
+  width: 320px;      /* or whatever fixed width you like */
+  max-height: 80vh;  /* scrollable panel */
+  overflow-y: auto;
+}
+
+.app-content::-webkit-scrollbar,
+.transaction-history::-webkit-scrollbar {
+  width: 8px;
+}
+
+.app-content::-webkit-scrollbar-thumb,
+.transaction-history::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.2);
+  border-radius: 4px;
 }
 
 .app-content.dark {
@@ -225,7 +340,7 @@ header .user-info select:hover {
   background: rgba(255, 245, 230, 0.9);
 }
 
-/* 市场页面 */
+/* å¸‚åœºé¡µé¢ */
 .market {
   display: grid;
   grid-template-columns: 250px 1fr;
@@ -275,13 +390,21 @@ header .user-info select:hover {
   align-items: center;
   margin: 15px 0;
   font-size: 16px;
+  font-weight: 600; /* Makes the label a bit bolder */
+  font-family: "Orbitron", sans-serif; /* Match overall font */
+  color: inherit; /* Keeps it consistent with the theme (can customize for light/dark if needed) */
+}
+.sidebar label input[type="checkbox"] {
+  margin-right: 10px;
 }
 
 .main-content {
   padding: 25px;
   border-radius: 10px;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  min-height: 100vh;
 }
+
 
 .main-content.dark {
   background: rgba(20, 20, 30, 0.9);
@@ -304,7 +427,6 @@ header .user-info select:hover {
   border-radius: 8px;
   cursor: pointer;
   font-size: 16px;
-  color: #fff;
   transition: all 0.3s ease;
   display: flex;
   align-items: center;
@@ -334,7 +456,12 @@ header .user-info select:hover {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 20px;
+  max-height: 600px;
+  overflow-y: auto;
+  padding: 10px;
+  border-radius: 8px;
 }
+
 
 .item {
   padding: 20px;
@@ -368,6 +495,14 @@ header .user-info select:hover {
 .item p {
   margin: 10px 0;
   font-size: 16px;
+
+  font-weight: 500;
+  line-height: 1.6;
+  font-family: "Orbitron", sans-serif;
+  padding: 10px 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: background 0.3s ease, transform 0.2s ease;
 }
 
 .item.dark p {
@@ -377,36 +512,41 @@ header .user-info select:hover {
 .item.light p {
   color: #333;
 }
-/* 基础样式 */
+/* åŸºç¡€æ ·å¼ */
 .item-detail {
   padding: 20px;
   border-radius: 10px;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  margin-top: 20px;
 }
 
-/* 深色主题 */
+/* æ·±è‰²ä¸»é¢˜ */
 .item-detail.dark {
   background: rgba(40, 40, 40, 0.9);
-  color: #e0e0e0; /* 深色主题下的文字颜色 */
+  color: #e0e0e0; /* æ·±è‰²ä¸»é¢˜ä¸‹çš„æ–‡å­—é¢œè‰² */
 }
 
-/* 浅色主题 */
+/* æµ…è‰²ä¸»é¢˜ */
 .item-detail.light {
   background: rgba(255, 245, 230, 0.9);
-  color: #333; /* 浅色主题下的文字颜色 */
+  color: #333; /* æµ…è‰²ä¸»é¢˜ä¸‹çš„æ–‡å­—é¢œè‰² */
 }
 
-/* 输入框样式 */
+/* è¾“å…¥æ¡†æ ·å¼ */
 .item-detail input {
-  background-color: var(--input-bg); /* 使用 CSS 变量动态设置背景色 */
-  color: var(--input-color); /* 使用 CSS 变量动态设置字体色 */
-  border: 1px solid var(--input-border); /* 使用 CSS 变量动态设置边框色 */
+  background-color: var(--input-bg); /* ä½¿ç”¨ CSS å˜é‡åŠ¨æ€è®¾ç½®èƒŒæ™¯è‰² */
+  color: var(--input-color); /* ä½¿ç”¨ CSS å˜é‡åŠ¨æ€è®¾ç½®å­—ä½“è‰² */
+  border: 1px solid var(--input-border); /* ä½¿ç”¨ CSS å˜é‡åŠ¨æ€è®¾ç½®è¾¹æ¡†è‰² */
   padding: 5px;
   border-radius: 3px;
-  width: 100%; /* 可选：使输入框宽度适应容器 */
+  width: 100%; /* å¯é€‰ï¼šä½¿è¾“å…¥æ¡†å®½åº¦é€‚åº”å®¹å™¨ */
+
+
 }
 
-/* 背包页面 */
+
+
+/* èƒŒåŒ…é¡µé¢ */
 .inventory {
   padding: 25px;
 }
@@ -417,7 +557,7 @@ header .user-info select:hover {
 
 .inventory.theme-light {
   background-color: #f0f0f0;
-  color: #333;
+  color: #000;
 }
 .inventory button,
 .main-content button {
@@ -425,13 +565,15 @@ header .user-info select:hover {
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s ease; 
+  background: linear-gradient(45deg, #34495e, #2c3e50);
+  color: #fff;
 }
 
 .inventory button.dark,
 .main-content button.dark {
-  background: linear-gradient(45deg, #2ecc71, #27ae60);
   color: #fff;
+  background-color: #34495e
 }
 
 .inventory button.light,
@@ -444,6 +586,13 @@ header .user-info select:hover {
 .main-content button:hover {
   background: linear-gradient(45deg, #3498db, #2980b9);
   transform: scale(1.05);
+}
+
+.inventory-tabs {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+  flex-wrap: wrap; /* Optional: makes it responsive */
 }
 
 .mint-section,
@@ -489,7 +638,7 @@ header .user-info select:hover {
   color: #333;
 }
 
-/* 登录页面 */
+/* ç™»å½•é¡µé¢ */
 .login-container {
   display: flex;
   flex-direction: column;

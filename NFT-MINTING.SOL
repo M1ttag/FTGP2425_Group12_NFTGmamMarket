@@ -1,0 +1,261 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
+contract EquipmentNFT is ERC721, ReentrancyGuard {
+    using Counters for Counters.Counter;
+    Counters.Counter private _tokenIds;
+
+    enum EquipmentType { Weapon, UpperBody, Pants, Shoes, Helmet }
+
+    struct Attributes {
+        uint256 attackPower;
+        uint256 abilityPower;
+        uint256 armorPenetration;
+        uint256 lifeSteal;
+        uint256 attackSpeed;
+        uint256 healthPoints;
+        uint256 armor;
+        uint256 magicResist;
+        uint256 mana;
+        uint256 manaRegeneration;
+        uint256 movementSpeed;
+        uint256 healingShielding;
+    }
+
+    struct Equipment {
+        EquipmentType eqType;
+        Attributes attributes;
+        string name;
+    }
+
+    struct Listing {
+        bool forSale;
+        uint256 salePrice;
+        bool forRent;
+        uint256 rentalPricePerDay;
+        uint256 minRentalDays;
+        address seller;
+    }
+
+    mapping(uint256 => Equipment) public equipments;
+    mapping(uint256 => Listing) public listings;
+    mapping(uint256 => address) private _users;
+    mapping(uint256 => uint64) private _userExpires;
+
+    uint256 public immutable AP_VALUE = 35;
+    uint256 public immutable ARM_VALUE = 30;
+    uint256 public immutable ABP_VALUE = 22;
+    uint256 public immutable ARP_VALUE = 25;
+    uint256 public immutable LS_VALUE = 20;
+    uint256 public immutable AS_VALUE = 40;
+    uint256 public immutable HP_VALUE = 15;
+    uint256 public immutable MR_VALUE = 30;
+    uint256 public immutable MANA_VALUE = 10;
+    uint256 public immutable MRG_VALUE = 12;
+    uint256 public immutable MS_VALUE = 50;
+    uint256 public immutable HS_VALUE = 18;
+
+    event EquipmentMinted(uint256 indexed tokenId, address indexed owner, EquipmentType eqType, string name);
+    event ItemListed(uint256 indexed tokenId, address indexed seller, bool forSale, uint256 salePrice, bool forRent, uint256 rentalPricePerDay, uint256 minRentalDays);
+    event ItemBought(uint256 indexed tokenId, address indexed seller, address indexed buyer, uint256 price);
+    event ItemDelisted(uint256 indexed tokenId, address indexed seller);
+    event ItemRented(uint256 indexed tokenId, address indexed seller, address indexed renter, uint256 rentalDays, uint256 totalRentalPrice);
+    event UpdateUser(uint256 indexed tokenId, address indexed user, uint64 expires);
+
+    constructor() ERC721("EquipmentNFT", "EQNFT") {}
+
+    function mintEquipment(
+        EquipmentType _type,
+        uint256[12] memory _attributes,
+        string memory _name
+    ) public payable nonReentrant {
+        require(_attributes.length == 12, "Invalid attributes length");
+        uint256 totalValue = calculateTotalValue(_attributes);
+        require(msg.value >= totalValue, "Insufficient payment");
+        _tokenIds.increment();
+        uint256 newTokenId = _tokenIds.current();
+        _mint(msg.sender, newTokenId);
+        equipments[newTokenId] = Equipment({
+            eqType: _type,
+            attributes: Attributes({
+                attackPower: _attributes[0],
+                abilityPower: _attributes[1],
+                armorPenetration: _attributes[2],
+                lifeSteal: _attributes[3],
+                attackSpeed: _attributes[4],
+                healthPoints: _attributes[5],
+                armor: _attributes[6],
+                magicResist: _attributes[7],
+                mana: _attributes[8],
+                manaRegeneration: _attributes[9],
+                movementSpeed: _attributes[10],
+                healingShielding: _attributes[11]
+            }),
+            name: _name
+        });
+        emit EquipmentMinted(newTokenId, msg.sender, _type, _name);
+        if (msg.value > totalValue) {
+            (bool success, ) = msg.sender.call{value: msg.value - totalValue}("");
+            require(success, "Refund failed");
+        }
+    }
+
+    function calculateTotalValue(uint256[12] memory _attributes) public pure returns (uint256) {
+        return 
+            _attributes[0] * 35 +
+            _attributes[1] * 22 +
+            _attributes[2] * 25 +
+            _attributes[3] * 20 +
+            _attributes[4] * 40 +
+            _attributes[5] * 15 +
+            _attributes[6] * 30 +
+            _attributes[7] * 30 +
+            _attributes[8] * 10 +
+            _attributes[9] * 12 +
+            _attributes[10] * 50 +
+            _attributes[11] * 18;
+    }
+
+    function listItem(
+        uint256 tokenId,
+        bool forSale,
+        uint256 salePrice,
+        bool forRent,
+        uint256 rentalPricePerDay,
+        uint256 minRentalDays
+    ) public {
+        require(ownerOf(tokenId) == msg.sender, "You are not the owner");
+        if (forSale) {
+            require(salePrice > 0, "Sale price must be greater than zero");
+        }
+        if (forRent) {
+            require(rentalPricePerDay > 0, "Rental price must be greater than zero");
+            require(minRentalDays > 0, "Minimum rental days must be greater than zero");
+        }
+        require(forSale || forRent, "Must be for sale or for rent");
+        listings[tokenId] = Listing({
+            forSale: forSale,
+            salePrice: salePrice,
+            forRent: forRent,
+            rentalPricePerDay: rentalPricePerDay,
+            minRentalDays: minRentalDays,
+            seller: msg.sender
+        });
+        emit ItemListed(tokenId, msg.sender, forSale, salePrice, forRent, rentalPricePerDay, minRentalDays);
+    }
+
+    function buyItem(uint256 tokenId) public payable nonReentrant {
+        Listing memory listing = listings[tokenId];
+        require(listing.forSale, "Item is not for sale");
+        require(msg.value >= listing.salePrice, "Insufficient payment");
+        require(userOf(tokenId) == address(0), "Item is currently rented");
+        address seller = listing.seller;
+        delete listings[tokenId];
+        _transfer(seller, msg.sender, tokenId);
+        (bool success, ) = seller.call{value: listing.salePrice}("");
+        require(success, "Payment failed");
+        if (msg.value > listing.salePrice) {
+            (success, ) = msg.sender.call{value: msg.value - listing.salePrice}("");
+            require(success, "Refund failed");
+        }
+        emit ItemBought(tokenId, seller, msg.sender, listing.salePrice);
+    }
+
+    function rentItem(uint256 tokenId, uint256 rentalDays) public payable nonReentrant {
+        Listing memory listing = listings[tokenId];
+        require(listing.forRent, "Item is not for rent");
+        require(rentalDays >= listing.minRentalDays, "Rental days less than minimum");
+        require(userOf(tokenId) == address(0), "Item is already rented");
+        uint256 totalRentalPrice = listing.rentalPricePerDay * rentalDays;
+        require(msg.value >= totalRentalPrice, "Insufficient payment");
+        _users[tokenId] = msg.sender;
+        _userExpires[tokenId] = uint64(block.timestamp + rentalDays * 1 days);
+        emit UpdateUser(tokenId, msg.sender, _userExpires[tokenId]);
+        (bool success, ) = listing.seller.call{value: totalRentalPrice}("");
+        require(success, "Payment failed");
+        if (msg.value > totalRentalPrice) {
+            (success, ) = msg.sender.call{value: msg.value - totalRentalPrice}("");
+            require(success, "Refund failed");
+        }
+        emit ItemRented(tokenId, listing.seller, msg.sender, rentalDays, totalRentalPrice);
+    }
+
+    function delistItem(uint256 tokenId) public {
+        require(ownerOf(tokenId) == msg.sender, "Only the owner can delist");
+        require(listings[tokenId].seller == msg.sender, "Not the seller");
+        delete listings[tokenId];
+        emit ItemDelisted(tokenId, msg.sender);
+    }
+
+    function getListedItems() public view returns (uint256[] memory) {
+        uint256 totalItems = _tokenIds.current();
+        uint256[] memory tempList = new uint256[](totalItems);
+        uint256 count = 0;
+        for (uint256 i = 1; i <= totalItems; i++) {
+            if ((listings[i].forSale || listings[i].forRent) && userOf(i) == address(0)) {
+                tempList[count] = i;
+                count++;
+            }
+        }
+        uint256[] memory listedItems = new uint256[](count);
+        for (uint256 i = 0; i < count; i++) {
+            listedItems[i] = tempList[i];
+        }
+        return listedItems;
+    }
+
+    function getEquipment(uint256 tokenId) public view returns (Equipment memory) {
+        return equipments[tokenId];
+    }
+
+    function getListing(uint256 tokenId) public view returns (Listing memory) {
+        return listings[tokenId];
+    }
+
+    function setUser(uint256 tokenId, address user, uint64 expires) public {
+        address owner = ownerOf(tokenId);
+        require(
+            msg.sender == owner ||
+            getApproved(tokenId) == msg.sender ||
+            isApprovedForAll(owner, msg.sender),
+            "Caller is not owner nor approved"
+        );
+        _users[tokenId] = user;
+        _userExpires[tokenId] = expires;
+        emit UpdateUser(tokenId, user, expires);
+    }
+
+    function userOf(uint256 tokenId) public view returns (address) {
+        if (_userExpires[tokenId] >= block.timestamp) {
+            return _users[tokenId];
+        } else {
+            return address(0);
+        }
+    }
+
+    function userExpires(uint256 tokenId) public view returns (uint256) {
+        return _userExpires[tokenId];
+    }
+
+    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+        return interfaceId == 0xad092b5c || super.supportsInterface(interfaceId);
+    }
+
+    function totalSupply() public view returns (uint256) {
+        return _tokenIds.current();
+    }
+
+    function _update(address to, uint256 tokenId, address auth) internal virtual override returns (address) {
+        address from = _ownerOf(tokenId);
+        if (from != address(0) && _users[tokenId] != address(0)) {
+            delete _users[tokenId];
+            delete _userExpires[tokenId];
+            emit UpdateUser(tokenId, address(0), 0);
+        }
+        return super._update(to, tokenId, auth);
+    }
+}

@@ -9,6 +9,7 @@
     "@testing-library/user-event": "^13.5.0",
     "bootstrap": "^5.3.3",
     "buffer": "^6.0.3",
+    "framer-motion": "^12.9.4",
     "i18next": "^24.2.3",
     "ipfs-http-client": "^60.0.1",
     "node": "^18.20.8",
