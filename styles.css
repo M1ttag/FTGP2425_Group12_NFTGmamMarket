@@ -39,20 +39,30 @@ body.light {
 
 .app-container {
   position: relative;
+  min-height: 100vh;
   z-index: 0;
 }
 
 .app-container::before {
   content: "";
   position: absolute;
-  inset: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   background-image: url("./images/sample.jpg");
   background-size: cover;
   opacity: 0.5;
   z-index: -1;
 
 }
+.app-header {
+  position: relative;
+  z-index: 10;
+}
 
+/* 4) If your user‑info dropdown needs to pop above everything */
+.user-menu {
+  position: absolute;
+  z-index: 20;
+}
 
 /* æ·±è‰²ä¸»é¢˜ */
 .app-container.theme-dark {
@@ -222,17 +232,29 @@ header .user-info select:hover {
   transform: scale(1.05);
 }
 
-/* ä¾§è¾¹å¯¼èˆªæ  */
 .app-body {
   display: flex;
+  height: calc(100vh - /* header height */ 100px);
+  overflow: hidden; 
 }
 
+/* Ensure your transaction‑history panel fits nicely: */
+.transaction-history {
+  flex: 0 0 300px;      /* width=300px, never shrink/grow */
+  max-width: 300px;
+  margin-left: 20px;    /* gap between main & history */
+  background: rgba(183, 176, 176, 0.9);
+  border-radius: 8px;
+  padding: 5px;
+  overflow-y: auto;
+}
+
+/* ä¾§è¾¹å¯¼èˆªæ  */
+
 .app-sidebar {
-  width: 200px;
-  padding: 20px;
-  border-radius: 10px;
-  margin-right: 20px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  flex: 0 0 200px;      /* never shrink, never grow, width=200px */
+  max-width: 200px;
+  overflow: auto;       /* in case it ever overflows */
 }
 
 .app-sidebar.dark {
@@ -246,7 +268,7 @@ header .user-info select:hover {
 
 .app-sidebar button {
   display: block;
-  width: 100%;
+  width: auto;            /* let the button size to its content */
   padding: 15px;
   margin-bottom: 10px;
   border: none;
@@ -276,11 +298,38 @@ header .user-info select:hover {
 }
 
 /* ä¸»å†…å®¹åŒºåŸŸ */
+/* MAIN CONTENT: fill remaining space, scroll vertically */
 .app-content {
+  flex: 1 1 auto;       /* grow & shrink */
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.market-with-history {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.market-with-history > :first-child {
   flex: 1;
-  padding: 25px;
-  border-radius: 10px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.tx-history-box {
+  width: 320px;      /* or whatever fixed width you like */
+  max-height: 80vh;  /* scrollable panel */
+  overflow-y: auto;
+}
+
+.app-content::-webkit-scrollbar,
+.transaction-history::-webkit-scrollbar {
+  width: 8px;
+}
+
+.app-content::-webkit-scrollbar-thumb,
+.transaction-history::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.2);
+  border-radius: 4px;
 }
 
 .app-content.dark {
