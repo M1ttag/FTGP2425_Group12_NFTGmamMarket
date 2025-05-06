@@ -250,6 +250,7 @@ contract EquipmentNFT is ERC721, ReentrancyGuard {
     }
 
     function _update(address to, uint256 tokenId, address auth) internal virtual override returns (address) {
+        require(userOf(tokenId) == address(0), "Cannot transfer during active rental");
         address from = _ownerOf(tokenId);
         if (from != address(0) && _users[tokenId] != address(0)) {
             delete _users[tokenId];

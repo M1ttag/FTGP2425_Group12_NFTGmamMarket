@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { fromWei } from './utils';
 
-
 function Market({ contract, account, web3, theme }) {
   const [items, setItems] = useState([]);
   const [filters, setFilters] = useState({
@@ -19,14 +18,6 @@ function Market({ contract, account, web3, theme }) {
     movementSpeed: false,
     healingShielding: false,
   });
-  const typeToPrefix = {
-    0: 'wu', // Weapon
-    1: 'yi', // UpperBody
-    2: 'ku', // Pants
-    3: 'xie', // Shoes
-    4: 'tou' // Helmet
-   };
-   
   const [selectedType, setSelectedType] = useState(null);
   const [hoveredItem, setHoveredItem] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -51,7 +42,7 @@ function Market({ contract, account, web3, theme }) {
             attributes: equipment.attributes,
             listing,
             type: equipment.eqType,
-            image: `/images/${typeToPrefix[equipment.eqType]}${equipment.styleId}.png`,
+            image: `/images/${equipmentTypes[equipment.eqType].name}.png`,
           };
         })
       );

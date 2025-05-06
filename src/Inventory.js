@@ -2,15 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { fromWei, toWei } from './utils';
 
-// 设备类型到图片前缀的映射
-const typeToPrefix = {
-  0: 'wu', // 武器
-  1: 'yi', // 上身
-  2: 'ku', // 裤子
-  3: 'xie', // 鞋子
-  4: 'tou' // 头盔
-};
-
 function Inventory({ contract, account, web3, theme }) {
   const [activeTab, setActiveTab] = useState("mint");
   const [userItems, setUserItems] = useState({ unlisted: [], listed: [] });
@@ -26,7 +17,7 @@ function Inventory({ contract, account, web3, theme }) {
   const [equipmentName, setEquipmentName] = useState("");
   const [attributes, setAttributes] = useState(Array(12).fill(0));
   const [totalValue, setTotalValue] = useState("0");
-  const [selectedStyle, setSelectedStyle] = useState(1); // 默认样式为 1
+  const [equipmentImage, setEquipmentImage] = useState(null);
   const { t } = useTranslation();
 
   const attributeLabels = t("attribute_labels", { returnObjects: true });
@@ -49,6 +40,15 @@ function Inventory({ contract, account, web3, theme }) {
     setTotalValue(fromWei(totalValueWei));
   };
 
+  const handleImageUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => setEquipmentImage(e.target.result);
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleMint = async () => {
     if (!contract || !equipmentName) {
       alert(t("mint_error_missing_data"));
@@ -56,10 +56,13 @@ function Inventory({ contract, account, web3, theme }) {
     }
     try {
       const valueInWei = calculateTotalValueLocal(attributes);
-      // 将所选样式传递给智能合约
       const tx = await contract.methods
-        .mintEquipment(equipmentType, attributes.map(attr => attr.toString()), equipmentName, selectedStyle)
+        .mintEquipment(equipmentType, attributes.map(attr => attr.toString()), equipmentName)
         .send({ from: account, value: valueInWei.toString() });
+      const newTokenId = tx.events.EquipmentMinted.returnValues.tokenId;
+      if (equipmentImage) {
+        localStorage.setItem(`equipmentImage_${newTokenId}`, equipmentImage);
+      }
       alert(t("mint_success"));
       loadUserItems();
     } catch (error) {
@@ -80,8 +83,7 @@ function Inventory({ contract, account, web3, theme }) {
           const listing = await contract.methods.listings(i).call();
           const currentUser = await contract.methods.userOf(i).call();
           const expiresAt = await contract.methods.userExpires(i).call();
-          // 根据设备类型和样式ID构造默认图片路径
-          const image = `/images/${typeToPrefix[equipment.eqType]}${equipment.styleId}.png`;
+          const image = localStorage.getItem(`equipmentImage_${i}`) || `/images/${equipmentTypes[equipment.eqType].name}.png`;
           userItems.push({
             id: i,
             name: equipment.name,
@@ -158,17 +160,29 @@ function Inventory({ contract, account, web3, theme }) {
   return (
     <div className={`app-container theme-${theme}`}>
       <div className="inventory">
+        {/* Tabs */}
         <div className="inventory-tabs">
-          <button className={`tab ${activeTab === "mint" ? "active" : ""}`} onClick={() => setActiveTab("mint")}>
+          <button
+            className={`tab ${activeTab === "mint" ? "active" : ""}`}
+            onClick={() => setActiveTab("mint")}
+          >
             {t("mint_equipment")}
           </button>
-          <button className={`tab ${activeTab === "unlisted" ? "active" : ""}`} onClick={() => setActiveTab("unlisted")}>
+          <button
+            className={`tab ${activeTab === "unlisted" ? "active" : ""}`}
+            onClick={() => setActiveTab("unlisted")}
+          >
             {t("unlisted_items")}
           </button>
-          <button className={`tab ${activeTab === "listed" ? "active" : ""}`} onClick={() => setActiveTab("listed")}>
+          <button
+            className={`tab ${activeTab === "listed" ? "active" : ""}`}
+            onClick={() => setActiveTab("listed")}
+          >
             {t("listed_items")}
           </button>
         </div>
+
+        {/* Content */}
         <div className="tab-content">
           {activeTab === "mint" && (
             <div className="mint-section">
@@ -193,25 +207,9 @@ function Inventory({ contract, account, web3, theme }) {
                 />
               </label>
               <label>
-                {t("style")}:
-                <select value={selectedStyle} onChange={(e) => setSelectedStyle(parseInt(e.target.value))}>
-                  <option value={1}> 1</option>
-                  <option value={2}> 2</option>
-                  <option value={3}> 3</option>
-                  <option value={4}> 4</option>
-                  <option value={5}> 5</option>
-                </select>
+                {t("image")}:
+                <input type="file" accept="image/*" onChange={handleImageUpload} />
               </label>
-              {equipmentType !== null && selectedStyle && (
-                <div>
-                  <h4>{t("preview")}</h4>
-                  <img
-                    src={`/images/${typeToPrefix[equipmentType]}${selectedStyle}.png`}
-                    alt="预览"
-                    style={{ width: '100px', height: '100px' }}
-                  />
-                </div>
-              )}
               <h3>{t("attributes")}</h3>
               {attributeLabels.map((label, index) => (
                 <label key={index}>
@@ -228,6 +226,7 @@ function Inventory({ contract, account, web3, theme }) {
               <button onClick={handleMint}>{t("mint")}</button>
             </div>
           )}
+
           {activeTab === "unlisted" && (
             <div className="item-list">
               {userItems.unlisted.length === 0 ? (
@@ -245,6 +244,7 @@ function Inventory({ contract, account, web3, theme }) {
               )}
             </div>
           )}
+
           {activeTab === "listed" && (
             <div className="item-list">
               {userItems.listed.length === 0 ? (
@@ -260,8 +260,8 @@ function Inventory({ contract, account, web3, theme }) {
                     )}
                     {item.listing.forRent && (
                       <p>
-                        {t("for_rent")}: {fromWei(item.listing.rentalPricePerDay)} ETH/天,
-                        最小 {item.listing.minRentalDays} {t("days")}
+                        {t("for_rent")}: {fromWei(item.listing.rentalPricePerDay)} ETH/day,
+                        min {item.listing.minRentalDays} {t("days")}
                       </p>
                     )}
                     <button onClick={() => handleDelist(item.id)}>{t("delist")}</button>
@@ -271,15 +271,13 @@ function Inventory({ contract, account, web3, theme }) {
             </div>
           )}
         </div>
+
+        {/* Listing Modal */}
         {listingItem && (
           <div className="listing-form">
             <h3>{t("list_item")}: {listingItem.name}</h3>
             <label>
-              <input
-                type="checkbox"
-                checked={listingOptions.forSale}
-                onChange={(e) => setListingOptions({ ...listingOptions, forSale: e.target.checked })}
-              />
+              <input type="checkbox" checked={listingOptions.forSale} onChange={(e) => setListingOptions({ ...listingOptions, forSale: e.target.checked })} />
               {t("list_for_sale")}
             </label>
             {listingOptions.forSale && (
@@ -295,11 +293,7 @@ function Inventory({ contract, account, web3, theme }) {
               </label>
             )}
             <label>
-              <input
-                type="checkbox"
-                checked={listingOptions.forRent}
-                onChange={(e) => setListingOptions({ ...listingOptions, forRent: e.target.checked })}
-              />
+              <input type="checkbox" checked={listingOptions.forRent} onChange={(e) => setListingOptions({ ...listingOptions, forRent: e.target.checked })} />
               {t("list_for_rent")}
             </label>
             {listingOptions.forRent && (
